@@ -8,7 +8,6 @@ namespace IntuneWinLib {
     public class Intune {
         internal const string PackageFileExtension = ".intunewin";
         internal const string ToolVersion = "1.8.5.0";
-        private const string CatalogFolderPrefix = "Cat_C029B285-222F-460B-8ECA-2CD7A8A424B7";
 
         /// <summary>
         /// Create the .intunewin package
@@ -43,7 +42,7 @@ namespace IntuneWinLib {
                 var length = new FileInfo(dstPath).Length;
                 var fileInfo = new FileInfo(setupFile);
                 var ext = fileInfo.Extension != null ? fileInfo.Extension.ToLowerInvariant() : string.Empty;
-                var appInfo = !ext.Contains(".msi") ? (ApplicationInfo)new CustomApplicationInfo() : (ApplicationInfo) new ;
+                var appInfo = !ext.Contains(".msi") ? (ApplicationInfo)new CustomApplicationInfo() : (ApplicationInfo) new MsiUtil().ReadApplicationInfo(setupFile);
                 appInfo.FileName = "IntunePackage.intunewin";
                 appInfo.Name = string.IsNullOrEmpty(appInfo.Name) ? Path.GetFileName(setupFile) : appInfo.Name;
                 appInfo.UnencryptedContentSize = length;

@@ -8,38 +8,55 @@ using System.Threading.Tasks;
 namespace IntuneWinLib {
     internal static class Encrypt {
         internal static FileEncryptionInfo EncryptFile(string file) {
-            // Generate keys and initialization vector
-            byte[] encryptionKey = GenerateKey();
-            byte[] hmacKey = GenerateKey();
+            // Generate encryption and MAC keys, and initialization vector
+            byte[] key1 = GenerateKey();
+            byte[] key2 = GenerateKey();
             byte[] iv = GenerateIV();
 
-            // Create a target file path
-            string targetFilePath = Path.Combine(Path.GetDirectoryName(file), Guid.NewGuid().ToString());
+            // Create a temporary file path for the encrypted file
+            string tempFilePath = Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, Guid.NewGuid().ToString());
 
             // Encrypt the file
-            byte[] hmacValue = EncryptFileWithIV(file, targetFilePath, encryptionKey, hmacKey, iv);
+            byte[] mac = EncryptFileWithIV(file, tempFilePath, key1, key2, iv);
 
-            // Compute SHA256 hash of the original file
+            // Compute SHA256 hash for the file
             byte[] fileDigest;
             using (FileStream fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.None)) {
-                using var sha256 = new SHA256Managed();
-                fileDigest = sha256.ComputeHash(fileStream);
+                var sha256Calculator = new SHA256WithBufferSize();
+                fileDigest = sha256Calculator.ComputeHash(fileStream, 2097152);
             }
 
-            // Create and populate FileEncryptionInfo
-            FileEncryptionInfo fileEncryptionInfo = new() {
-                EncryptionKey = Convert.ToBase64String(encryptionKey),
-                MacKey = Convert.ToBase64String(hmacKey),
+            // Construct FileEncryptionInfo object
+            var fileEncryptionInfo = new FileEncryptionInfo {
+                EncryptionKey = Convert.ToBase64String(key1),
+                MacKey = Convert.ToBase64String(key2),
                 InitializationVector = Convert.ToBase64String(iv),
-                Mac = Convert.ToBase64String(hmacValue),
+                Mac = Convert.ToBase64String(mac),
                 ProfileIdentifier = "ProfileVersion1",
                 FileDigest = Convert.ToBase64String(fileDigest),
                 FileDigestAlgorithm = "SHA256"
             };
 
             // Copy the encrypted file back to the original location
-            File.Copy(targetFilePath, file, true);
+            File.Copy(tempFilePath, file, true);
+            File.Delete(tempFilePath);
+
             return fileEncryptionInfo;
+        }
+
+        private class SHA256WithBufferSize {
+            public byte[] ComputeHash(Stream inputStream, int bufferSize) {
+                using var sha256 = SHA256.Create();
+                var buffer = new byte[bufferSize];
+                int bytesRead;
+
+                while ((bytesRead = inputStream.Read(buffer, 0, bufferSize)) > 0) {
+                    sha256.TransformBlock(buffer, 0, bytesRead, null, 0);
+                }
+
+                sha256.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                return sha256.Hash;
+            }
         }
 
 
