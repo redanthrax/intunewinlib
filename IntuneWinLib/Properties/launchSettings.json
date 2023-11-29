@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "IntuneWinLib": {
+      "commandName": "Project",
+      "commandLineArgs": "powershell.exe \"\"..\\test.ps1\"\""
+    }
+  }
+}
