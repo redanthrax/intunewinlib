@@ -3,6 +3,8 @@ using System.IO.Packaging;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Globalization;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace IntuneWinLib {
     public class Intune {
@@ -51,8 +53,9 @@ namespace IntuneWinLib {
                 appInfo.EncryptionInfo = Encrypt.EncryptFile(dstPath);
                 var metaDataPath = Path.Combine(winPackPath, "Metadata");
                 var detectionFile = Path.Combine(metaDataPath, "Detection.xml");
-                var xml = appInfo.ToXml();
                 if (!Directory.Exists(metaDataPath)) Directory.CreateDirectory(metaDataPath);
+
+                var xml = appInfo.ToXml();
                 using (FileStream fileStream = File.Open(detectionFile, FileMode.Create, FileAccess.Write, FileShare.None)) {
                     byte[] bytes = Encoding.UTF8.GetBytes(xml);
                     fileStream.Write(bytes, 0, bytes.Length);
@@ -65,6 +68,84 @@ namespace IntuneWinLib {
             }
         }
 
-        internal static string GetOutputFileName(string setupFile, string outputFolder) => Path.Combine(outputFolder, string.Format((IFormatProvider)CultureInfo.InvariantCulture, "{0}{1}", (object)Path.GetFileNameWithoutExtension(setupFile), (object)".intunewin"));
+        public static void ExtractPackage(string packageFile, string outputFolder) {
+#if DEBUG
+            //This is for calling the method to attach and debug via pwsh
+            Thread.Sleep(10000);
+#endif
+            if (!File.Exists(packageFile))
+                throw new Exception($"Package file \"{packageFile}\" does not exist!");
+
+            if (!Directory.Exists(outputFolder))
+                Directory.CreateDirectory(outputFolder);
+
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            try {
+                // Decompress the package
+                var winPackPath = Path.Combine(tempDir, "IntuneWinPackageExtracted");
+                Directory.CreateDirectory(winPackPath);
+                Compress.Extract(packageFile, winPackPath);
+
+                // Extract metadata and read application info
+                var metaDataPath = Path.Combine(winPackPath, "IntuneWinPackage", "Metadata");
+                var detectionFile = Path.Combine(metaDataPath, "Detection.xml");
+                ApplicationInfo appInfo = ReadApplicationInfoFromXml(detectionFile);
+
+                // Decrypt the file
+                var contentsPath = Path.Combine(winPackPath, "IntuneWinPackage", "Contents");
+                var encryptedFilePath = Path.Combine(contentsPath, "IntunePackage.intunewin");
+                var decryptedFilePath = Path.Combine(outputFolder, appInfo.FileName);
+                if (!File.Exists(detectionFile))
+                    throw new FileNotFoundException($"The file {detectionFile} was not found.");
+
+                Encrypt.DecryptFile(encryptedFilePath, appInfo.EncryptionInfo);
+                CopyFolder(winPackPath, outputFolder);
+            }
+            finally {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+        }
+
+        public static void CopyFolder(string sourceFolder, string destFolder) {
+            // Create the destination folder if it does not exist
+            Directory.CreateDirectory(destFolder);
+
+            // Copy each file into the new directory
+            foreach (string filePath in Directory.GetFiles(sourceFolder)) {
+                string fileName = Path.GetFileName(filePath);
+                string destFilePath = Path.Combine(destFolder, fileName);
+                File.Copy(filePath, destFilePath, true); // true to overwrite if file already exists
+            }
+
+            // Copy each subdirectory using recursion
+            foreach (string subdirectoryPath in Directory.GetDirectories(sourceFolder)) {
+                string subdirectoryName = Path.GetFileName(subdirectoryPath);
+                string destSubdirectoryPath = Path.Combine(destFolder, subdirectoryName);
+                CopyFolder(subdirectoryPath, destSubdirectoryPath);
+            }
+        }
+
+        private static ApplicationInfo ReadApplicationInfoFromXml(string xmlFilePath) {
+            if (!File.Exists(xmlFilePath))
+                throw new FileNotFoundException($"The file {xmlFilePath} was not found.");
+
+            var serializer = new XmlSerializer(typeof(ApplicationInfo));
+            string xmlContent = File.ReadAllText(xmlFilePath);
+
+            // Check if the XML declaration is missing
+            if (!xmlContent.TrimStart().StartsWith("<?xml")) {
+                // Add XML declaration
+                xmlContent = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + xmlContent;
+            }
+
+            using (var reader = new StringReader(xmlContent)) {
+                return serializer.Deserialize(reader) as ApplicationInfo;
+            }
+        }
+
+        internal static string GetOutputFileName(string setupFile, string outputFolder) {
+            return Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(setupFile)}.intunewin");
+        }
+
     }
 }

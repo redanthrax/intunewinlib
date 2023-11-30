@@ -44,6 +44,42 @@ namespace IntuneWinLib {
             return fileEncryptionInfo;
         }
 
+        internal static bool DecryptFile(string encryptedFile, FileEncryptionInfo encryptionInfo) {
+            // Extract encryption and MAC keys, and initialization vector from encryptionInfo
+            byte[] key1 = Convert.FromBase64String(encryptionInfo.EncryptionKey);
+            byte[] key2 = Convert.FromBase64String(encryptionInfo.MacKey);
+            byte[] iv = Convert.FromBase64String(encryptionInfo.InitializationVector);
+
+            // Create a temporary file path for the decrypted file
+            string tempFilePath = Path.Combine(Path.GetDirectoryName(encryptedFile) ?? string.Empty, Guid.NewGuid().ToString());
+
+            // Decrypt the file
+            bool isDecryptionSuccessful = DecryptFileWithIV(encryptedFile, tempFilePath, key1, key2, iv);
+            if (!isDecryptionSuccessful) {
+                return false;
+            }
+
+            // Validate file integrity using SHA256 hash
+            byte[] fileDigest;
+            using (FileStream fileStream = File.Open(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.None)) {
+                var sha256Calculator = new SHA256WithBufferSize();
+                fileDigest = sha256Calculator.ComputeHash(fileStream, 2097152);
+            }
+
+            string computedDigest = Convert.ToBase64String(fileDigest);
+            if (computedDigest != encryptionInfo.FileDigest) {
+                // File digest doesn't match, indicating the file may be corrupted or tampered with
+                return false;
+            }
+
+            // Copy the decrypted file back to the original location
+            File.Copy(tempFilePath, encryptedFile, true);
+            File.Delete(tempFilePath);
+
+            return true;
+        }
+
+
         private class SHA256WithBufferSize {
             public byte[] ComputeHash(Stream inputStream, int bufferSize) {
                 using var sha256 = SHA256.Create();
@@ -107,5 +143,45 @@ namespace IntuneWinLib {
 
             return hashValue;
         }
+
+        private static bool DecryptFileWithIV(string encryptedFile, string outputFile, byte[] encryptionKey, byte[] hmacKey, byte[] expectedIV) {
+            using (Aes aes = Aes.Create()) {
+                var hmac = new HMACSHA256(hmacKey);
+                int hmacSize = hmac.HashSize / 8;
+                byte[] buffer = new byte[2097152];
+
+                using (var encryptedStream = new FileStream(encryptedFile, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+                    // Read HMAC and IV from the encrypted file
+                    byte[] fileHmac = new byte[hmacSize];
+                    encryptedStream.Read(fileHmac, 0, hmacSize);
+
+                    byte[] iv = new byte[aes.BlockSize / 8];
+                    encryptedStream.Read(iv, 0, iv.Length);
+
+                    // Check if the IV matches
+                    if (!iv.SequenceEqual(expectedIV)) {
+                        return false; // IV doesn't match, file might be tampered
+                    }
+
+                    using (var decryptor = aes.CreateDecryptor(encryptionKey, iv))
+                    using (var decryptedStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var cryptoStream = new CryptoStream(decryptedStream, decryptor, CryptoStreamMode.Write)) {
+                        int bytesRead;
+                        while ((bytesRead = encryptedStream.Read(buffer, 0, buffer.Length)) > 0) {
+                            cryptoStream.Write(buffer, 0, bytesRead);
+                        }
+                        cryptoStream.FlushFinalBlock();
+                    }
+
+                    // Validate HMAC for integrity check
+                    using (var outputFileStream = new FileStream(outputFile, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+                        byte[] computedHmac = hmac.ComputeHash(outputFileStream);
+                    }
+                }
+            }
+
+            return true;
+        }
+
     }
 }

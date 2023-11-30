@@ -1,0 +1,31 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.5.0">
+  <Name>AutoElevate</Name>
+  <UnencryptedContentSize>2042748</UnencryptedContentSize>
+  <FileName>IntunePackage.intunewin</FileName>
+  <SetupFile>AESetup.msi</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>CZTXbNSbZS61N8SqXj7AAjX2NHeImVuVs62NeA4SdwA=</EncryptionKey>
+    <MacKey>knjdMs0I+f6wXsp8zVx2hv4ftuj6I8iAzujXYUaNdpQ=</MacKey>
+    <InitializationVector>acqw8/YESSaouopKriWdQQ==</InitializationVector>
+    <Mac>elSq8GVC8wyCaIYGXwwlADWkXngLuLeG0g3uCVt2eAY=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>+xsjPi2XKzjttpkRlFgz8W9BHXtmfOiX/ecx9j2mV74=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+  <MsiInfo>
+    <MsiProductCode>{A39A1B33-CEB9-4875-BA5B-980AD93D91FC}</MsiProductCode>
+    <MsiProductVersion>2.6.3</MsiProductVersion>
+    <MsiPackageCode>{712AD9AE-A5E8-4F31-9BAC-BA3997370490}</MsiPackageCode>
+    <MsiUpgradeCode>{9C48E0AC-1427-4615-8A5B-F2E7F01848F4}</MsiUpgradeCode>
+    <MsiExecutionContext>System</MsiExecutionContext>
+    <MsiRequiresLogon>false</MsiRequiresLogon>
+    <MsiRequiresReboot>false</MsiRequiresReboot>
+    <MsiIsMachineInstall>true</MsiIsMachineInstall>
+    <MsiIsUserInstall>false</MsiIsUserInstall>
+    <MsiIncludesServices>true</MsiIncludesServices>
+    <MsiIncludesODBCDataSource>false</MsiIncludesODBCDataSource>
+    <MsiContainsSystemRegistryKeys>true</MsiContainsSystemRegistryKeys>
+    <MsiContainsSystemFolders>false</MsiContainsSystemFolders>
+    <MsiPublisher>CyberFOX LLC</MsiPublisher>
+  </MsiInfo>
+</ApplicationInfo>

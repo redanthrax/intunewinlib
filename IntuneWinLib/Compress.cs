@@ -7,13 +7,6 @@ namespace IntuneWinLib {
     internal static class Compress {
         private static Uri FakeRelativeUri = new Uri("FakeUri", UriKind.Relative);
 
-        /// <summary>
-        /// Create a compressed "zipped" folder
-        /// </summary>
-        /// <param name="folder">The folder to compress.</param>
-        /// <param name="destinationFile">The compressed file to create.</param>
-        /// <param name="noCompression">Use no compression or fastest compression.</param>
-        /// <param name="includeBaseDirectory">Include the folder specified in the compressed file.</param>
         internal static void Folder(
             string folder,
             string destinationFile,
@@ -26,7 +19,6 @@ namespace IntuneWinLib {
 
             if(File.Exists(destinationFile)) File.Delete(destinationFile);
 
-            var dirInfo = new DirectoryInfo(folder);
             if (noCompression) {
                 CompressFromDirectory(folder, destinationFile, CompressionLevel.NoCompression, includeBaseDirectory);
             }
@@ -35,136 +27,110 @@ namespace IntuneWinLib {
             }
         }
 
-        private static void CompressFromDirectory(string sourceDirectoryName, string destinationArchiveFileName, CompressionLevel? compressionLevel, bool includeBaseDirectory) {
+        private static void CompressFromDirectory(
+            string sourceDirectoryName,
+            string destinationArchiveFileName,
+            CompressionLevel compressionLevel,
+            bool includeBaseDirectory) {
+            // Ensure the source directory is in full path format
             sourceDirectoryName = Path.GetFullPath(sourceDirectoryName);
+
+            // Ensure the destination file is in full path format and the directory exists
             destinationArchiveFileName = Path.GetFullPath(destinationArchiveFileName);
+            var destinationDirectory = Path.GetDirectoryName(destinationArchiveFileName);
+            if (!Directory.Exists(destinationDirectory)) {
+                Directory.CreateDirectory(destinationDirectory);
+            }
 
-            HashSet<string> addedEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Use the ZipFile class to create the zip archive
+            ZipFile.CreateFromDirectory(sourceDirectoryName, destinationArchiveFileName, compressionLevel, includeBaseDirectory);
 
-            using (FileStream zipToOpen = new FileStream(destinationArchiveFileName, FileMode.OpenOrCreate)) {
-                using (ZipArchive archive = new ZipArchive(zipToOpen, ZipArchiveMode.Create)) {
-                    DirectoryInfo directoryInfo = new DirectoryInfo(sourceDirectoryName);
-                    string baseFolder = directoryInfo.FullName;
+            // If including empty directories, post-process the zip file
+            if (includeBaseDirectory) {
+                IncludeEmptyDirectories(sourceDirectoryName, destinationArchiveFileName);
+            }
+        }
 
-                    if (includeBaseDirectory && directoryInfo.Parent != null) {
-                        baseFolder = directoryInfo.Parent.FullName;
-                    }
-
-                    foreach (FileSystemInfo fileSystemInfo in directoryInfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories)) {
-                        string entryName = fileSystemInfo.FullName.Substring(baseFolder.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                        if (fileSystemInfo is FileInfo fileInfo) {
-                            // Create entry for file
-                            CompressionLevel effectiveCompressionLevel = compressionLevel ?? CompressionLevel.Optimal;
-                            archive.CreateEntryFromFile(fileInfo.FullName, entryName, effectiveCompressionLevel);
-                            addedEntries.Add(entryName);
-                        }
-                        else if (fileSystemInfo is DirectoryInfo dirInfo && IsDirEmpty(dirInfo)) {
-                            // Create entry for directory (if necessary and if it's empty)
-                            string dirEntryName = entryName + Path.DirectorySeparatorChar;
-                            if (!addedEntries.Contains(dirEntryName)) {
-                                archive.CreateEntry(dirEntryName);
-                                addedEntries.Add(dirEntryName);
-                            }
-                        }
-                    }
-
-                    if (includeBaseDirectory) {
-                        string rootEntryName = directoryInfo.Name + Path.DirectorySeparatorChar;
-                        if (!addedEntries.Contains(rootEntryName)) {
-                            archive.CreateEntry(rootEntryName);
-                            addedEntries.Add(rootEntryName);
+        private static void IncludeEmptyDirectories(string sourceDirectoryName, string destinationArchiveFileName) {
+            using (ZipArchive zipArchive = ZipFile.Open(destinationArchiveFileName, ZipArchiveMode.Update)) {
+                var allDirectories = Directory.GetDirectories(sourceDirectoryName, "*", SearchOption.AllDirectories);
+                foreach (var directory in allDirectories) {
+                    if (Directory.GetFiles(directory).Length == 0 && Directory.GetDirectories(directory).Length == 0) {
+                        string directoryNameInArchive = directory.Substring(sourceDirectoryName.Length).Replace('\\', '/') + "/";
+                        if (zipArchive.GetEntry(directoryNameInArchive) == null) {
+                            zipArchive.CreateEntry(directoryNameInArchive);
                         }
                     }
                 }
             }
         }
 
-
-        private static void CompressFromDirectory(string sourceDirectoryName, string destinationArchiveFileName, CompressionLevel? compressionLevel, bool includeBaseDirectory, bool useExistingZipFile) {
+        private static void CompressFromDirectory(
+            string sourceDirectoryName,
+            string destinationArchiveFileName,
+            CompressionLevel? compressionLevel,
+            bool includeBaseDirectory,
+            bool useExistingZipFile) {
             sourceDirectoryName = Path.GetFullPath(sourceDirectoryName);
             destinationArchiveFileName = Path.GetFullPath(destinationArchiveFileName);
+
+            // Determine the mode based on whether to append to the existing file or create a new one
             ZipArchiveMode mode = useExistingZipFile ? ZipArchiveMode.Update : ZipArchiveMode.Create;
 
-            HashSet<string> addedEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            using (ZipArchive archive = ZipFile.Open(destinationArchiveFileName, mode, Encoding.UTF8)) {
+            using (ZipArchive destination = ZipFile.Open(destinationArchiveFileName, mode)) {
                 DirectoryInfo directoryInfo = new DirectoryInfo(sourceDirectoryName);
-                string baseFolder = includeBaseDirectory && directoryInfo.Parent != null ? directoryInfo.Parent.FullName : directoryInfo.FullName;
+                string baseFolder = includeBaseDirectory && directoryInfo.Parent != null
+                    ? directoryInfo.Parent.FullName
+                    : directoryInfo.FullName;
 
-                foreach (FileSystemInfo fileSystemInfo in directoryInfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories)) {
-                    string entryName = fileSystemInfo.FullName.Substring(baseFolder.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                foreach (FileSystemInfo item in directoryInfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories)) {
+                    string relativePath = item.FullName.Substring(baseFolder.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-                    if (fileSystemInfo is FileInfo fileInfo) {
-                        // Create entry for file
-                        CompressionLevel effectiveCompressionLevel = compressionLevel ?? CompressionLevel.Optimal;
-                        archive.CreateEntryFromFile(fileInfo.FullName, entryName, effectiveCompressionLevel);
-                        addedEntries.Add(entryName);
+                    if (item is FileInfo fileInfo) {
+                        ZipArchiveEntry entry = destination.CreateEntryFromFile(fileInfo.FullName, relativePath, compressionLevel ?? CompressionLevel.Optimal);
                     }
-                    else if (fileSystemInfo is DirectoryInfo dirInfo && IsDirEmpty(dirInfo)) {
-                        // Create entry for empty directory (if necessary)
-                        string dirEntryName = entryName + Path.DirectorySeparatorChar;
-                        if (!addedEntries.Contains(dirEntryName)) {
-                            archive.CreateEntry(dirEntryName);
-                            addedEntries.Add(dirEntryName);
-                        }
+                    else if (item is DirectoryInfo dir && IsDirEmpty(dir)) {
+                        // Create an entry for an empty directory
+                        destination.CreateEntry(relativePath + Path.DirectorySeparatorChar);
                     }
                 }
 
-                if (includeBaseDirectory) {
-                    string rootEntryName = directoryInfo.Name + Path.DirectorySeparatorChar;
-                    if (!addedEntries.Contains(rootEntryName)) {
-                        archive.CreateEntry(rootEntryName);
-                        addedEntries.Add(rootEntryName);
-                    }
+                // Optionally, include the base directory itself if it's empty
+                if (includeBaseDirectory && IsDirEmpty(directoryInfo)) {
+                    destination.CreateEntry(directoryInfo.Name + Path.DirectorySeparatorChar);
                 }
             }
         }
 
+        public static void Extract(string packageFile, string outputDirectory) {
+            if (!File.Exists(packageFile))
+                throw new FileNotFoundException($"Package file '{packageFile}' not found.");
 
-        private static void Entry(
-            Package package,
-            FileInfo file,
-            string entryName,
-            CompressionOption compressionOption
-            ) {
-            if (package == null) throw new ArgumentNullException(nameof(package));
+            if (!Directory.Exists(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
 
-            if (file == null) throw new ArgumentNullException(nameof(file));
+            using (ZipArchive archive = ZipFile.OpenRead(packageFile)) {
+                foreach (ZipArchiveEntry entry in archive.Entries) {
+                    // Skip if the entry is a directory
+                    if (entry.FullName.EndsWith(Path.DirectorySeparatorChar))
+                        continue;
 
-            var relativeUri = entryName != null ? 
-                new Uri(entryName, UriKind.Relative) :
-                throw new ArgumentNullException(nameof(entryName));
+                    string destinationPath = Path.GetFullPath(Path.Combine(outputDirectory, entry.FullName));
 
-            var partUri = (Uri)PackUriHelper.CreatePartUri(FakeRelativeUri)
-                .GetType().GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, (Binder)null, new Type[1] {
-                    typeof(string)
-                }, (ParameterModifier[])null).Invoke(new object[1] {
-                    (object)GetStringForPartUriFromAnyUri(new Uri(new Uri("http://defaultcontainer/"), relativeUri))
-                });
+                    // Ensure that the destination path is within the output directory
+                    if (!destinationPath.StartsWith(outputDirectory, StringComparison.Ordinal))
+                        throw new IOException("Attempt to extract to an outside directory.");
 
-            var part = package.CreatePart(partUri, string.Empty, compressionOption);
-            using (Stream stream1 = (Stream)File.Open(file.FullName, FileMode.Open,
-                FileAccess.Read, FileShare.Read)) {
-                using (Stream stream2 = part.GetStream()) {
-                    stream1.CopyTo(stream2, 2097152);
+                    // Create the directory of the file if it does not exist
+                    string directoryPath = Path.GetDirectoryName(destinationPath);
+                    if (directoryPath != null && !Directory.Exists(directoryPath)) {
+                        Directory.CreateDirectory(directoryPath);
+                    }
+
+                    // Extract the file
+                    entry.ExtractToFile(destinationPath, overwrite: true);
                 }
             }
-        }
-
-        private static string GetStringForPartUriFromAnyUri(Uri partUri) {
-            Uri uri;
-            if (!partUri.IsAbsoluteUri) {
-                uri = new Uri(partUri.GetComponents(UriComponents.SerializationInfoString, UriFormat.SafeUnescaped), UriKind.Relative);
-            }
-            else {
-                UriComponents components = UriComponents.Path | UriComponents.KeepDelimiter;
-                if (partUri.AbsoluteUri.Contains("#"))
-                    components |= UriComponents.Fragment;
-                uri = new Uri(partUri.GetComponents(components, UriFormat.SafeUnescaped), UriKind.Relative);
-            }
-
-            return uri.GetComponents(UriComponents.SerializationInfoString, UriFormat.Unescaped);
         }
 
         private static bool IsDirEmpty(DirectoryInfo possiblyEmptyDir) =>
