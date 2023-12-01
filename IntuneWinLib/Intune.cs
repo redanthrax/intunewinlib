@@ -18,7 +18,7 @@ namespace IntuneWinLib {
         /// <param name="setupFile">The full path to the setup file.</param>
         /// <param name="outputFolder">The folder for the destinition of the .intunewin file.</param>
         /// <returns>Exit Code</returns>
-        public static void CreatePackage(string folder, string setupFile, string outputFolder) {
+        public static string CreatePackage(string folder, string setupFile, string outputFolder) {
 #if DEBUG
             //This is for calling the method to attach and debug via pwsh
             Thread.Sleep(10000);
@@ -66,6 +66,8 @@ namespace IntuneWinLib {
             finally {
                 if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             }
+
+            return outputFileName;
         }
 
         public static void ExtractPackage(string packageFile, string outputFolder) {

@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "swa start ./frontend --api-location ./api",
+            "name": "Run SWA",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            "name": "Attach to API",
+            "type": "PowerShell",
+            "request": "attach",
+            "customPipeName": "AzureFunctionsPSWorker",
+            "runspaceId": 1,
+            "preLaunchTask": "Run API"
+        }
+    ]
+}

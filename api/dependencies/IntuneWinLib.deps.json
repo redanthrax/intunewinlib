@@ -1,0 +1,57 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "IntuneWinLib/1.0.0": {
+        "dependencies": {
+          "System.IO.Packaging": "8.0.0",
+          "WixToolset.Dtf.WindowsInstaller": "4.0.3"
+        },
+        "runtime": {
+          "IntuneWinLib.dll": {}
+        }
+      },
+      "System.IO.Packaging/8.0.0": {
+        "runtime": {
+          "lib/net6.0/System.IO.Packaging.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        }
+      },
+      "WixToolset.Dtf.WindowsInstaller/4.0.3": {
+        "runtime": {
+          "lib/netstandard2.0/WixToolset.Dtf.WindowsInstaller.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.3.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "IntuneWinLib/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "System.IO.Packaging/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-8g1V4YRpdGAxFcK8v9OjuMdIOJSpF30Zb1JGicwVZhly3I994WFyBdV6mQEo8d3T+URQe55/M0U0eIH0Hts1bg==",
+      "path": "system.io.packaging/8.0.0",
+      "hashPath": "system.io.packaging.8.0.0.nupkg.sha512"
+    },
+    "WixToolset.Dtf.WindowsInstaller/4.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ySEwQBjKoCCncpP4CqtKIoGHyszjuo8uHj3Vmm6erFodUihzUb+/YJhBsrS3HLp8wlXugLvGiS63o7QRPb1y+g==",
+      "path": "wixtoolset.dtf.windowsinstaller/4.0.3",
+      "hashPath": "wixtoolset.dtf.windowsinstaller.4.0.3.nupkg.sha512"
+    }
+  }
+}
