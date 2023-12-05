@@ -5,7 +5,7 @@
             "command": "swa start ./frontend --api-location ./api",
             "name": "Run SWA",
             "request": "launch",
-            "type": "node-terminal"
+            "type": "node-terminal",
         },
         {
             "name": "Attach to API",

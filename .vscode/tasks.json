@@ -10,6 +10,20 @@
 			"options": {
 				"cwd": "${workspaceFolder}/api"
 			}
+		},
+		{
+			"type": "shell",
+			"label": "Run Storage",
+			"command": "azurite",
+			"isBackground": true,
+			"problemMatcher": {
+				"base": "$func-watch",
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^Azurite Blob service",
+					"endsPattern": ".successfully."
+				}
+			}
 		}
 	]
 }
