@@ -10,7 +10,7 @@ $storageContext = New-AzStorageContext -StorageAccountName $env:StorageAccount -
 $containerName = "uploads"
 $startTime = Get-Date
 $expiryTime = $startTime.AddHours(0.5)
-$permissions = "rw"
+$permissions = "rwd"
 
 $opt = @{
     Name = $containerName

@@ -49,3 +49,4 @@ Push-OutputBinding -Name response -Value ([HttpResponseContext]@{
 Write-Output "Cleaning up"
 Remove-Item $fullPath -Recurse -Force
 Remove-item $fname -Recurse -Force
+Invoke-RestMethod -Method 'DELETE' -Uri $Request.Body

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>File Upload to Azure</title>
+    <title>Intune Win32 App Wizard</title>
     <!-- Alpine.js via CDN -->
     <script src="//unpkg.com/alpinejs" defer></script>
 </head>
@@ -37,7 +37,7 @@
                 }
 
                 const sasUrl = await resp.text();
-                this.status = "Uploading file. Please wait..."
+                this.status = "Uploading file. Please wait, this part can take a while..."
                 const requestOptions = {
                     method: 'PUT',
                     headers: {
@@ -61,9 +61,8 @@
                         this.status = "Upload failed."
                     }
                 } catch (error) {
-                } finally {
-                    this.status = "Upload complete."
-                }
+                    this.status = "There was an error";
+                }           
             },
             downloadFile(blob, fileName) {
               const newFileName = fileName.replace(/\.[^/.]+$/, "") + ".intunewin";
@@ -77,6 +76,7 @@
               a.click();
               window.URL.revokeObjectURL(url);
               a.remove();
+              this.status = "Package complete."
             }
         };
     }
