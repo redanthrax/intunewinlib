@@ -1,7 +1,11 @@
 $job = Start-Job -ScriptBlock {
-    Add-Type -Path ".\IntuneWinLib\bin\Release\net6.0\publish\IntuneWinLib.dll"
-    [IntuneWinLib.Intune]::CreatePackage(".\TestApp", 
+    Add-Type -Path ".\IntuneWinLib.dll"
+    [IntuneWinLib.Intune]::CreatePackage(
+        #Path to package folder
+        ".\TestApp", 
+        #Path to MSI
         ".\TestApp\Konnekt.msi", 
+        #Path to Output Folder
         ".\Pub")
 }
 
