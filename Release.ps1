@@ -1,12 +1,18 @@
+#Make sure the IntuneWinLib.dll is in the same folder as this script.
+
+#Full path to package folder
+$PackageFolder = ""
+#Full MSI Filename
+$Package = ""
+#Destination for the package ouput
+$Destination = ""
+
 $job = Start-Job -ScriptBlock {
     Add-Type -Path ".\IntuneWinLib.dll"
     [IntuneWinLib.Intune]::CreatePackage(
-        #Path to package folder
-        ".\App", 
-        #Path to MSI
-        ".\App\Konnekt.msi", 
-        #Path to Output Folder
-        ".\PublishApp")
+        $PackageFolder, 
+        "$PackageFolder\$Package", 
+        $Destination)
 }
 
 Wait-Job $job
