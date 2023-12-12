@@ -13,5 +13,9 @@ $job = Start-Job -ScriptBlock {
         $Destination)
 }
 
+$startTime = Get-Date
 Wait-Job $job
+$endTime = Get-Date
+$duration = $endTime - $startTime
+Write-Host "Conversion completed in $($duration.TotalSeconds) seconds."
 Receive-Job $job
