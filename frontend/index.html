@@ -1,86 +1,166 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Intune Win32 App Wizard</title>
-    <!-- Alpine.js via CDN -->
-    <script src="//unpkg.com/alpinejs" defer></script>
-</head>
-<body>
-<h1>Prepare MSI for Intune Win32 App</h1>
-<div x-data="fileUploader()">
-    <form @submit.prevent="uploadFile">
-        <input type="file" accept=".msi" @change="fileChosen" />
-        <button type="submit">Upload</button>
-    </form>
-    <h2 x-text="status"></h2>
-</div>
-
-<script>
-    function fileUploader() {
-        return {
-            file: null,
-            status: "Waiting for file...",
-            isUploading: false,
-            uploadComplete: false,
-            fileChosen(event) {
-                this.file = event.target.files[0];
-                this.status = "Ready to upload."
-            },
-            async uploadFile() {
-                this.status = "Getting token"
-                const resp = await fetch("/api/GetStorage",{
-                    method: "GET",
-                });
-
-                if (!resp.ok) {
-                    alert("Could not get token");
-                }
-
-                const sasUrl = await resp.text();
-                this.status = "Uploading file. Please wait, this part can take a while..."
-                const requestOptions = {
-                    method: 'PUT',
-                    headers: {
-                        'x-ms-blob-type': 'BlockBlob'
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Intune Win32 App Wizard</title>
+        <link rel="stylesheet" href="css/styles.css">
+        <script src="//unpkg.com/alpinejs" defer></script>
+    </head>
+    <body>
+        <div class="content">
+            <h1>Intune Win32 App Wizard</h1>
+            <form class="box" x-data="uploader()" @submit.prevent="uploadFile">
+                <div class="content" x-bind:class="{ 'is-hidden': isUploading }">
+                    <div class="field" >
+                        <div class="control">
+                            <div class="file has-name">
+                                <label class="file-label">
+                                    <input class="file-input" type="file" accept=".msi" @change="fileChoice">
+                                    <span class="file-cta">
+                                        <span class="file-icon">
+                                            <i class="fas fa-upload"></i>
+                                        </span>
+                                        <span class="file-label">
+                                            Choose a file...
+                                        </span>
+                                    </span>
+                                    <span class="file-name" x-text="filename"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="control">
+                            <button class="button is-primary">Upload</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="content" x-bind:class="{ 'is-hidden': !isUploading }">
+                    <p x-text="status"></p>
+                    <progress class="progress" x-bind:value="percent" max="100"></progress>
+                </div>
+            </form>
+        </div>
+        <script type="text/javascript">
+            function uploader() {
+                console.log("Waiting for file...");
+                return {
+                    file: null,
+                    filename: '',
+                    percent: 1,
+                    status: '',
+                    isUploading: false,
+                    sasUrl: '',
+                    fileChoice(event) {
+                        console.log("File chosen.")
+                        this.file = event.target.files[0];
+                        this.filename = this.file.name;
                     },
-                    body: this.file
-                };
+                    async uploadFile() {
+                        if (!this.file) {
+                            console.error('No file selected');
+                            return;
+                        }
 
-                try {
-                    const response = await fetch(sasUrl, requestOptions);
-                    if (response.ok) {
+                        this.status = "Preparing to upload file...";
+                        this.isUploading = true;
+                        const resp = await fetch("/api/GetStorage",{
+                            method: "GET",
+                        });
+
+                        if (!resp.ok) {
+                            this.status = "Error getting storage token.";
+                            return;
+                        }
+
+                        this.sasUrl = await resp.text();
+                        //do the upload
+                        const chunkSize = 4 * 1024 * 1024; // 4MB
+                        let start = 0;
+                        let blockIds = [];
+                        const totalBlocks = Math.ceil(this.file.size / chunkSize);
+                        const blockIdLength = 64; 
+
+                        while (start < this.file.size) {
+                            this.status = "Uploading file..."
+                            const chunk = this.file.slice(start, start + chunkSize);
+                            const blockId = this.createBlockId(start / chunkSize, totalBlocks, blockIdLength);
+                            blockIds.push(blockId);
+                            await this.uploadChunk(chunk, blockId);
+                            start += chunkSize;
+                            this.percent = (start / this.file.size) * 100;
+                        }
+
+                        await this.finalizeUpload(blockIds);
+
                         this.status = "Upload complete. Processing file..."
                         const fResp = await fetch("/api/CreatePackage", {
                             method: "POST",
-                            body: sasUrl
+                            body: this.sasUrl
                         }).then(res => res.blob())
                         .then(blob => {
                             this.downloadFile(blob, this.file.name);
                         });
-                    } else {
-                        this.status = "Upload failed."
-                    }
-                } catch (error) {
-                    this.status = "There was an error";
-                }           
-            },
-            downloadFile(blob, fileName) {
-              const newFileName = fileName.replace(/\.[^/.]+$/, "") + ".intunewin";
-              
-              // Create a link element, set the href to the blob URL and trigger the download
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = newFileName;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              a.remove();
-              this.status = "Package complete."
-            }
-        };
-    }
-</script>
+                    },
+                    downloadFile(blob, fileName) {
+                        const newFileName = fileName.replace(/\.[^/.]+$/, "") + ".intunewin";
+                        
+                        // Create a link element, set the href to the blob URL and trigger the download
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = newFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                        this.status = "Package complete."
+                    },
+                    createBlockId(index, totalBlocks, maxLength) {
+                        const rawId = index.toString().padStart(totalBlocks.toString().length, '0');
+                        const encodedId = btoa(rawId);
+                        return encodedId.substr(0, maxLength);
+                    },
+                    async uploadChunk(chunk, blockId) {
+                        const encodedBlockId = encodeURIComponent(blockId);
+                        const blobUrl = `${this.sasUrl}&comp=block&blockid=${encodedBlockId}`;
+                        const headers = new Headers({
+                            'x-ms-blob-type': 'BlockBlob',
+                        });
 
-</body>
+                        await fetch(blobUrl, {
+                            method: 'PUT',
+                            headers: headers,
+                            body: chunk
+                        });
+                    },
+
+                    async finalizeUpload(blockIds) {
+                        this.status = "Finalizing file."
+                        const blobUrl = `${this.sasUrl}&comp=blocklist`;
+                        const xmlBlockList = this.generateBlockListXml(blockIds);
+                        const headers = new Headers({
+                            'Content-Type': 'application/xml',
+                        });
+
+                        await fetch(blobUrl, {
+                            method: 'PUT',
+                            headers: headers,
+                            body: xmlBlockList
+                        });
+                    },
+
+                    generateBlockListXml(blockIds) {
+                        let xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
+                        blockIds.forEach(id => {
+                            xml += `<Latest>${id}</Latest>`;
+                        });
+                        xml += '</BlockList>';
+                        return xml;
+                    }
+                };
+            }
+        </script>
+    </body>
 </html>

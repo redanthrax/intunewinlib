@@ -1,0 +1,14 @@
+@charset "utf-8";
+@import "../node_modules/bulma/bulma.sass";
+
+@import "../node_modules/bulma/sass/utilities/_all.sass";
+
+//$body-background-color: #023047;
+
+html, body {
+    background-color: $body-background-color
+}
+
+.content {
+    margin: 1rem;
+}

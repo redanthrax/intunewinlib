@@ -18,7 +18,7 @@ swa deploy --env production ./frontend --verbose silly
 
 ## Func Deploy
 ```powershell
-func azure functionapp publish --nozip --no-build <funcappname>
+func azure functionapp publish <funcappname> --nozip --no-build 
 ```
 
 Make sure function app is 64-bit

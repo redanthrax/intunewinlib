@@ -17,8 +17,9 @@ namespace IntuneWinLib {
         /// <param name="folder">The folders where the manifest and setup files exist.</param>
         /// <param name="setupFile">The full path to the setup file.</param>
         /// <param name="outputFolder">The folder for the destinition of the .intunewin file.</param>
+        /// <param name="tempDir">Temp directory for local storage. Optional.</param>
         /// <returns>Exit Code</returns>
-        public static string CreatePackage(string folder, string setupFile, string outputFolder) {
+        public static string CreatePackage(string folder, string setupFile, string outputFolder, string tempDir = "") {
 #if DEBUG
             //This is for calling the method to attach and debug via pwsh
             Thread.Sleep(10000);
@@ -32,7 +33,8 @@ namespace IntuneWinLib {
             if (!Directory.Exists(outputFolder))
                 throw new Exception($"Output Folder ${outputFolder} does not exist!");
 
-            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            if (string.IsNullOrEmpty(tempDir)) Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
             var outputFileName = GetOutputFileName(setupFile, outputFolder);
             try {
                 var winPackPath = Path.Combine(tempDir, "IntuneWinPackage");

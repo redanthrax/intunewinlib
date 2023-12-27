@@ -6,3 +6,4 @@ swa-cli.config.json
 __azurite*
 __blobstorage__
 __queuestorage__
+node_modules/
