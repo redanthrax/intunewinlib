@@ -11,7 +11,7 @@
         <div class="content">
             <h1>Intune Win32 App Wizard</h1>
             <form class="box" x-data="uploader()" @submit.prevent="uploadFile">
-                <div class="content" x-bind:class="{ 'is-hidden': isUploading }">
+                <div class="content" x-bind:class="{ 'is-hidden': loading }">
                     <div class="field" >
                         <div class="control">
                             <div class="file has-name">
@@ -36,9 +36,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="content" x-bind:class="{ 'is-hidden': !isUploading }">
+                <div class="content" x-bind:class="{ 'is-hidden': !loading }">
                     <p x-text="status"></p>
-                    <progress class="progress" x-bind:value="percent" max="100"></progress>
+                    <progress class="progress" x-bind:value="percent" max="100" x-bind:class="{ 'is-hidden': processing }"></progress>
+                    <progress class="progress" max="100" x-bind:class="{ 'is-hidden': !processing }"></progress>
                 </div>
             </form>
         </div>
@@ -50,19 +51,20 @@
                     filename: '',
                     percent: 1,
                     status: '',
-                    isUploading: false,
+                    loading: false,
+                    processing: false,
                     sasUrl: '',
+                    intervalId: null,
+                    guid: '',
                     fileChoice(event) {
-                        console.log("File chosen.")
+                        console.log("File selected.")
                         this.file = event.target.files[0];
                         this.filename = this.file.name;
                     },
-                    async uploadFile() {
-                        if (!this.file) {
-                            console.error('No file selected');
-                            return;
-                        }
 
+                    async uploadFile() {
+                        console.log("Uploading file.")
+                        this.loading = true;
                         this.status = "Preparing to upload file...";
                         this.isUploading = true;
                         const resp = await fetch("/api/GetStorage",{
@@ -75,7 +77,6 @@
                         }
 
                         this.sasUrl = await resp.text();
-                        //do the upload
                         const chunkSize = 4 * 1024 * 1024; // 4MB
                         let start = 0;
                         let blockIds = [];
@@ -89,39 +90,22 @@
                             blockIds.push(blockId);
                             await this.uploadChunk(chunk, blockId);
                             start += chunkSize;
-                            this.percent = (start / this.file.size) * 100;
+                            this.percent = Math.round((start / this.file.size) * 100);
                         }
 
                         await this.finalizeUpload(blockIds);
 
-                        this.status = "Upload complete. Processing file..."
-                        const fResp = await fetch("/api/CreatePackage", {
-                            method: "POST",
-                            body: this.sasUrl
-                        }).then(res => res.blob())
-                        .then(blob => {
-                            this.downloadFile(blob, this.file.name);
-                        });
+                        this.status = "Upload complete. Processing file...";
+                        this.processing = true;
+                        this.pollProcess();
                     },
-                    downloadFile(blob, fileName) {
-                        const newFileName = fileName.replace(/\.[^/.]+$/, "") + ".intunewin";
-                        
-                        // Create a link element, set the href to the blob URL and trigger the download
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = newFileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-                        this.status = "Package complete."
-                    },
+
                     createBlockId(index, totalBlocks, maxLength) {
                         const rawId = index.toString().padStart(totalBlocks.toString().length, '0');
                         const encodedId = btoa(rawId);
                         return encodedId.substr(0, maxLength);
                     },
+
                     async uploadChunk(chunk, blockId) {
                         const encodedBlockId = encodeURIComponent(blockId);
                         const blobUrl = `${this.sasUrl}&comp=block&blockid=${encodedBlockId}`;
@@ -158,6 +142,69 @@
                         });
                         xml += '</BlockList>';
                         return xml;
+                    },
+
+                    extractGUID(url) {
+                        const regex = /\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.msi/i;
+                        const match = url.match(regex);
+                        return match ? match[1] : null;
+                    },
+
+                    pollProcess() {
+                        console.log("Starting poll");
+                        this.guid = this.extractGUID(this.sasUrl);
+                        this.intervalId = setInterval(() => {
+                            console.log(`Checking if ${this.guid} done.`)
+                            fetch('/api/CheckStatus', {
+                                method: 'POST',
+                                body: this.guid
+                            })
+                            .then(response => response.text())
+                            .then(data => {
+                                if(data) {
+                                    console.log("clearing check");
+                                    clearInterval(this.intervalId);
+                                    this.processing = false;
+                                    this.loading = true;
+                                    //initiate download
+                                    var xhr = new XMLHttpRequest();
+                                    xhr.open("GET", data, true);
+                                    xhr.responseType = "blob";
+
+                                    xhr.onprogress = (event) => {
+                                        this.percent = Math.round((event.loaded / event.total) * 100);
+                                    }
+
+                                    xhr.onload = () => {
+                                        if(xhr.status === 200) {
+                                            const newFileName = this.file.name.replace(/\.[^/.]+$/, "") + ".intunewin";
+                                            const url = window.URL.createObjectURL(xhr.response);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = newFileName;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            window.URL.revokeObjectURL(url);
+                                            a.remove();
+                                            this.status = "Package complete."
+                                        }
+                                        else {
+                                            this.status = "Error during download."
+                                        }
+                                    }
+
+                                    xhr.send();
+                                    //delete file
+                                    fetch('/api/DeletePackage', {
+                                        method: 'POST',
+                                        body: this.guid
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.log(error);
+                            });
+                        }, 10000);
                     }
                 };
             }

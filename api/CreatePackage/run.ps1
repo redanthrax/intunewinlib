@@ -13,11 +13,12 @@ if (-Not($Request.Body)) {
 
 Write-Output "Downloading: $($Request.Body)"
 
-Write-Output "Creating temp file to for package"
+Write-Output "Creating temp file for package"
 if ($env:Production -eq "false") {
     $tempFile = New-TemporaryFile
 }
 else {
+    Write-Output "Production env"
     $filename = "$([guid]::NewGuid().ToString()).tmp"
     $tempFile = New-Item -ItemType File -Path "C:\home\temp\$filename" -Force
 }
@@ -44,24 +45,51 @@ catch {
     Write-Output "Error: $_"
 }
 
+
+#delete from storage
+Invoke-RestMethod -Method 'DELETE' -Uri $Request.Body
 $fname = Split-Path -Path $file -Leaf
 
-$headers = @{
-    "Content-Type" = "application/octet-stream"
-    "Content-Disposition" = "attachment; filename=`"$fname`""
+#need to make new sas url
+Write-Output "Getting SAS token"
+$storageContext = New-AzStorageContext -StorageAccountName $env:StorageAccount -StorageAccountKey $env:StorageKey
+
+$containerName = "uploads"
+$startTime = Get-Date
+$expiryTime = $startTime.AddHours(0.5)
+$permissions = "rwd"
+
+$opt = @{
+    Name = $containerName
+    Context = $storageContext
+    Permission = $permissions
+    ExpiryTime = $expiryTime
 }
 
+$sasToken = New-AzStorageContainerSASToken @opt
+$sasUrl = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$($fname)?$sasToken"
 Push-OutputBinding -Name response -Value ([HttpResponseContext]@{
     StatusCode = [System.Net.HttpStatusCode]::OK
-    Headers = $headers
-    Body = [io.file]::ReadAllBytes($file)
+    Body = $sasUrl
 })
+
+$fileContent = [System.IO.File]::ReadAllBytes($file)
+$headers = @{
+    "x-ms-blob-type" = "BlockBlob"
+}
+
+try {
+    Write-Output "Uploading file to storage."
+    Invoke-WebRequest -Uri $sasUrl -Method "PUT" -Headers $headers -Body $fileContent -TimeoutSec 300
+    Write-Output "File uploaded"
+}
+catch {
+    Write-Output "An error occured during upload: $_"
+}
 
 Write-Output "Cleaning up"
 Remove-Item $fullPath -Recurse -Force
-Remove-Item $fname -Recurse -Force
 Remove-Item $tempFile -Force
 if ($env:Production -eq "true") {
     Remove-Item "C:\home\temp" -Recurse -Force
 }
-Invoke-RestMethod -Method 'DELETE' -Uri $Request.Body
