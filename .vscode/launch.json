@@ -6,14 +6,13 @@
             "name": "Run SWA",
             "request": "launch",
             "type": "node-terminal",
-        },
+            "preLaunchTask": "Run All Tasks"
+        }
+    ],
+    "compounds": [
         {
-            "name": "Attach to API",
-            "type": "PowerShell",
-            "request": "attach",
-            "customPipeName": "AzureFunctionsPSWorker",
-            "runspaceId": 1,
-            "preLaunchTask": "Run API"
+            "name": "Launch All",
+            "configurations": ["Run SWA"]
         }
     ]
 }

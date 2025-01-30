@@ -6,7 +6,8 @@ param($Request, $TriggerMetadata)
 Import-Module "./Modules/Helpers.psm1"
 
 $token = Get-StorageToken "downloads"
-$file = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($Request.Body).intunewin?$token"
+#$file = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($Request.Body).intunewin?$token"
+$file = "http://127.0.0.1:10000/devstoreaccount1/downloads/$($Request.Body).intunewin?$token"
 
 #check if the file is ready
 try {
@@ -30,7 +31,7 @@ try {
     }
 }
 catch {
-    "Error: $_"
+    Write-Error "Error: $_"
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::NotFound
     })

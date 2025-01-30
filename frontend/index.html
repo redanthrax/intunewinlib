@@ -68,7 +68,7 @@
                         this.status = "Preparing to upload file...";
                         this.isUploading = true;
                         const resp = await fetch("/api/GetStorage",{
-                            method: "GET",
+                            method: "GET"
                         });
 
                         if (!resp.ok) {
