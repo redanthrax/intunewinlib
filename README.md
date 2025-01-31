@@ -34,3 +34,5 @@ return file guid to client
 trigger azure function app to convert file when appears in uploads
 poll function to see if file is done based on guid
 trigger delete once download completes
+
+winget install 

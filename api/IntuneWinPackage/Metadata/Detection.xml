@@ -1,0 +1,31 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.5.0">
+  <Name>Node.js</Name>
+  <UnencryptedContentSize>29713487</UnencryptedContentSize>
+  <FileName>C:\Users\ggagnon\AppData\Local\Temp\11d0b34c-3177-42e1-9e37-71fe67468cd3\ec36aba5-4678-4c9c-9c42-3e9bf357d8d6.intunewin.intunewin</FileName>
+  <SetupFile>ec36aba5-4678-4c9c-9c42-3e9bf357d8d6.msi</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>6To0xcxanDTApZpDVsmSoY31IrjLWdyHFj1IgBUkdOs=</EncryptionKey>
+    <MacKey>OgsgmHHHrX4ybIdOJKtEZs0xRAcCmfInXc6G1K2V1gE=</MacKey>
+    <InitializationVector>go0A6rWaayMNH32uwDpoyg==</InitializationVector>
+    <Mac>0DRj1yJZUDTJxgcPNnsNhsVrrL59wJ8wLd0kHBpB9DE=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>YWa/bZHQch1cPGzH2MgzBD7ctSf2QaFFvaXI9n2ttrk=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+  <MsiInfo>
+    <MsiProductCode>{AA0A2391-7D56-4949-A9FD-A47AF3C8A586}</MsiProductCode>
+    <MsiProductVersion>22.13.1</MsiProductVersion>
+    <MsiPackageCode>{1319F7DA-6D68-491B-B1A2-9AF3E2EA7AAE}</MsiPackageCode>
+    <MsiUpgradeCode>{47C07A3A-42EF-4213-A85D-8F5A59077C28}</MsiUpgradeCode>
+    <MsiExecutionContext>System</MsiExecutionContext>
+    <MsiRequiresLogon>false</MsiRequiresLogon>
+    <MsiRequiresReboot>false</MsiRequiresReboot>
+    <MsiIsMachineInstall>true</MsiIsMachineInstall>
+    <MsiIsUserInstall>false</MsiIsUserInstall>
+    <MsiIncludesServices>false</MsiIncludesServices>
+    <MsiIncludesODBCDataSource>false</MsiIncludesODBCDataSource>
+    <MsiContainsSystemRegistryKeys>true</MsiContainsSystemRegistryKeys>
+    <MsiContainsSystemFolders>false</MsiContainsSystemFolders>
+    <MsiPublisher>Node.js Foundation</MsiPublisher>
+  </MsiInfo>
+</ApplicationInfo>

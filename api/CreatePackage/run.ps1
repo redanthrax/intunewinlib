@@ -67,7 +67,11 @@ $opt = @{
 }
 
 $sasToken = New-AzStorageContainerSASToken @opt
-$sasUrl = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$($fname)?$sasToken"
+$sasUrl = "http://127.0.0.1:10000/devstoreaccount1/uploads/$($fname)?$sasToken"
+if($env:Production -eq 'true') {
+    $sasUrl = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$($fname)?$sasToken"
+}
+
 Push-OutputBinding -Name response -Value ([HttpResponseContext]@{
     StatusCode = [System.Net.HttpStatusCode]::OK
     Body = $sasUrl

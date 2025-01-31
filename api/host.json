@@ -3,7 +3,8 @@
   "logging": {
     "fileLoggingMode": "debugOnly",
     "logLevel": {
-      "default": "Error"
+      "default": "None",
+      "Function": "Information"
     },
     "console": {
       "isEnabled": true,

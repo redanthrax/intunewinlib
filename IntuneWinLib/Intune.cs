@@ -39,7 +39,7 @@ namespace IntuneWinLib {
             try {
                 var winPackPath = Path.Combine(tempDir, "IntuneWinPackage");
                 var contentsPath = Path.Combine(winPackPath, "Contents");
-                var dstPath = Path.Combine(contentsPath, "IntunePackage.intunewin");
+                var dstPath = Path.Combine(contentsPath, $"{outputFileName}.intunewin");
 
                 Compress.Folder(folder, dstPath, false, false);
 
@@ -47,7 +47,7 @@ namespace IntuneWinLib {
                 var fileInfo = new FileInfo(setupFile);
                 var ext = fileInfo.Extension != null ? fileInfo.Extension.ToLowerInvariant() : string.Empty;
                 var appInfo = !ext.Contains(".msi") ? (ApplicationInfo)new CustomApplicationInfo() : (ApplicationInfo) new MsiUtil().ReadApplicationInfo(setupFile);
-                appInfo.FileName = "IntunePackage.intunewin";
+                appInfo.FileName = $"{outputFileName}.intunewin";
                 appInfo.Name = string.IsNullOrEmpty(appInfo.Name) ? Path.GetFileName(setupFile) : appInfo.Name;
                 appInfo.UnencryptedContentSize = length;
                 appInfo.ToolVersion = ToolVersion;

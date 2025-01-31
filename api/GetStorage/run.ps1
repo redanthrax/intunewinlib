@@ -4,13 +4,13 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 Import-Module "./Modules/Helpers.psm1"
-
 Write-Output "Get Storage request triggered"
-
 $token = Get-StorageToken "uploads"
-Write-Error "Token: $token"
-#$file = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$([guid]::NewGuid()).msi?$token"
+Write-Output "Prod: '$env:Production'"
 $file = "http://127.0.0.1:10000/devstoreaccount1/uploads/$([guid]::NewGuid()).msi?$token"
+if($env:Production -eq 'true') {
+    $file = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$([guid]::NewGuid()).msi?$token"
+}
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
     StatusCode = [HttpStatusCode]::OK

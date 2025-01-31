@@ -15,8 +15,5 @@ function Get-StorageToken {
     }
 
     $token = New-AzStorageContainerSASToken @opt
-
-    # $file = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$([guid]::NewGuid()).msi?$sasUri"
-
     return $token
 }

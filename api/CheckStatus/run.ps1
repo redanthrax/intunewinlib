@@ -6,8 +6,10 @@ param($Request, $TriggerMetadata)
 Import-Module "./Modules/Helpers.psm1"
 
 $token = Get-StorageToken "downloads"
-#$file = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($Request.Body).intunewin?$token"
 $file = "http://127.0.0.1:10000/devstoreaccount1/downloads/$($Request.Body).intunewin?$token"
+if($env:Production -eq 'true') {
+    $file = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($Request.Body).intunewin?$token"
+}
 
 #check if the file is ready
 try {

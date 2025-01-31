@@ -5,17 +5,13 @@ param([byte[]] $InputBlob, $TriggerMetadata)
 Import-Module "./Modules/Helpers.psm1"
 
 Write-Output "PowerShell Blob trigger: Name: $($TriggerMetadata.Name) Size: $($InputBlob.Length) bytes"
-
 Write-Output "Importing dependencies."
-Add-Type -Path ".\dependencies\IntuneWinLib.dll"
-
+Add-Type -Path ".\dependencies\Debug\net8.0\IntuneWinLib.dll"
 Write-Output "Production ENV: $($env:Production)"
+$dir = New-Item -ItemType Directory "C:\home\temp" -Force
 if ($env:Production -eq "false") {
     $tempFile = New-TemporaryFile
     $dir = [System.IO.Path]::GetDirectoryName($tempFile)
-}
-else {
-    $dir = New-Item -ItemType Directory "C:\home\temp" -Force
 }
 
 $folderGuid = "$dir\$([guid]::NewGuid().ToString())"
@@ -41,6 +37,7 @@ try {
     if($env:Production -eq "true") {
         $file = [IntuneWinLib.Intune]::CreatePackage($folderGuid, $fullPath, $destPath, "C:\home\temp\intunewin")
     } else {
+        Write-Output "Package Paths: $folderGuid, $fullPath, $destPath"
         $file = [IntuneWinLib.Intune]::CreatePackage($folderGuid, $fullPath, $destPath)
     }
     Write-Output "Wrote package to $destPath"
@@ -48,17 +45,25 @@ try {
 }
 catch {
     Write-Output "Error: $_"
+    return
 }
 
 $token = Get-StorageToken "uploads"
 #Delete old upload
-$uri = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$($TriggerMetadata.Name)?$token"
+$uri = "http://127.0.0.1:10000/devstoreaccount1/uploads/$($TriggerMetadata.Name)?$token"
+if($env:Production -eq 'true') {
+    $uri = "https://$($env:StorageAccount).blob.core.windows.net/uploads/$($TriggerMetadata.Name)?$token"
+}
+
 Write-Output "Deleting uploaded file at $uri"
 Invoke-RestMethod -Method 'DELETE' -Uri $uri
-
 $token = Get-StorageToken "downloads"
 $fname = Split-Path -Path $file -Leaf
-$sasUrl = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($fname)?$token"
+$sasUrl = "http://127.0.0.1:10000/devstoreaccount1/downloads/$($fname)?$token"
+if($env:Production -eq 'true') {
+    $sasUrl = "https://$($env:StorageAccount).blob.core.windows.net/downloads/$($fname)?$token"
+}
+
 $fileContent = [System.IO.File]::ReadAllBytes($file)
 $headers = @{
     "x-ms-blob-type" = "BlockBlob"

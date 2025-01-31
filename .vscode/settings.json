@@ -2,5 +2,6 @@
     "azureFunctions.deploySubpath": "FunctionaApp",
     "azureFunctions.projectLanguage": "PowerShell",
     "azureFunctions.projectRuntime": "~4",
-    "debug.internalConsoleOptions": "neverOpen"
+    "debug.internalConsoleOptions": "neverOpen",
+    "codeQL.githubDatabase.download": "never"
 }
